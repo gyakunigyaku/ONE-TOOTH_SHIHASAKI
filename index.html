@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ONE TOOTH</title>
+    <style>
+        /* 画面全体の中央にゲーム領域を配置 */
+        body { margin: 0; display: flex; justify-content: center; align-items: center; background-color: #000; min-height: 100vh; overflow: hidden; font-family: sans-serif; }
+        
+        /* 【重要修正】背景画像の縦横比をロックし、座標ズレを完全に防ぐ構造に変更 */
+        #gameArea { position: relative; width: 100vw; max-width: 500px; overflow: hidden; }
+        #bgImg { width: 100%; display: block; } /* 背景画像自体を基準にする */
+        
+        #startScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('TITLE_LOGO.jpg') no-repeat center center; background-size: cover; z-index: 50; overflow: hidden; }
+        
+        /* START・STOPボタン：顎下付近に少し小さくして固定 */
+        #startBtn, #stopBtn { 
+            position: absolute; 
+            bottom: 8%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 130px; /* 以前より小さく調整 */
+            cursor: pointer; 
+            transition: transform 0.1s; 
+        }
+        #startBtn { z-index: 60; }
+        #stopBtn { z-index: 20; display: none; }
+        #startBtn:active, #stopBtn:active { transform: translateX(-50%) scale(0.95); }
+        
+        .top-char { position: absolute; width: 70px; z-index: 55; pointer-events: none; }
+
+        #audioOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; z-index: 70; }
+        #audioOverlay p { font-size: 14px; margin-top: 10px; color: #ccc; font-weight: normal; }
+
+        #tooth { position: absolute; width: 40px; z-index: 10; display: none; margin-left: -20px; margin-top: -20px; }
+        
+        /* 結果ボード：画面最上部（札の上） */
+        #resultBoard { 
+            position: absolute; 
+            top: 2%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(255, 255, 255, 0.85); 
+            padding: 8px 15px; 
+            text-align: center; 
+            border-radius: 12px; 
+            display: none; 
+            width: 75%; 
+            z-index: 30; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+            backdrop-filter: blur(3px); 
+        }
+        .result-title { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 2px; }
+        .score-text { font-size: 38px; font-weight: 900; color: #ff0000; margin-bottom: 2px; text-shadow: 1px 1px 0px #fff; line-height: 1; }
+        
+        .gold-text-wrapper { filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.6)); margin-bottom: 2px; }
+        .gold-text {
+            background: linear-gradient(to bottom, #FFFFE0 0%, #FFD700 40%, #B8860B 60%, #FFFFE0 100%);
+            -webkit-background-clip: text;
+            color: transparent;
+            -webkit-text-stroke: 1.5px #FFFFFF;
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            line-height: 1.1;
+        }
+
+        .gameover-text {
+            font-size: 28px;
+            font-weight: 900;
+            background: url('tooth.png') repeat;
+            background-size: 25px;
+            -webkit-background-clip: text;
+            color: transparent;
+            -webkit-text-stroke: 1px #333;
+            line-height: 1.1;
+            margin-bottom: 2px;
+        }
+
+        /* リプレイボタン：左下角の少し上 */
+        #retryBtn { 
+            position: absolute; 
+            bottom: 12%; 
+            left: 5%; 
+            padding: 10px 16px; 
+            font-size: 15px; 
+            font-weight: bold; 
+            background-color: #ff4a4a; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 0 #cc0000; 
+            z-index: 80; 
+            display: none; 
+            transition: transform 0.1s; 
+        }
+        #retryBtn:active { transform: translateY(4px); box-shadow: none; }
+    </style>
+</head>
+<body>
+    <div id="gameArea">
+        <img id="bgImg" src="bg.jpg" alt="">
+        
+        <div id="audioOverlay">
+            <div>画面をタップして開始</div>
+            <p>※BGMを再生するために必要です</p>
+        </div>
+        
+        <div id="startScreen">
+            <img id="char1" class="top-char" src="top_t_01.png" alt="">
+            <img id="char2" class="top-char" src="top_t_02.png" alt="">
+            <img id="char3" class="top-char" src="top_t_03.png" alt="">
+            
+            <img id="startBtn" src="START.png" alt="START">
+        </div>
+
+        <img id="tooth" src="tooth.png" alt="歯">
+        <img id="stopBtn" src="stop.png" alt="STOP">
+        
+        <div id="resultBoard">
+            <div id="resultText"></div>
+        </div>
+        
+        <button id="retryBtn" onclick="location.reload()">リプレイ</button>
+    </div>
+
+    <script>
+        const audioOverlay = document.getElementById('audioOverlay');
+        const startScreen = document.getElementById('startScreen');
+        const startBtn = document.getElementById('startBtn');
+        const tooth = document.getElementById('tooth');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultBoard = document.getElementById('resultBoard');
+        const resultText = document.getElementById('resultText');
+        const retryBtn = document.getElementById('retryBtn');
+        const gameArea = document.getElementById('gameArea');
+
+        const bgm = new Audio('bgm.mp3');
+        bgm.loop = true;
+        const stopSe = new Audio('stop.mp3');
+
+        let isMusicStarted = false;
+        
+        function tryAutoPlay() {
+            bgm.play().then(() => {
+                isMusicStarted = true;
+                audioOverlay.style.display = 'none';
+            }).catch(() => {
+                // 自動再生がブロックされた場合
+                audioOverlay.style.display = 'flex';
+            });
+        }
+        
+        window.addEventListener('load', tryAutoPlay);
+        
+        audioOverlay.addEventListener('click', () => {
+            bgm.play().catch(e => console.log("BGMエラー:", e));
+            isMusicStarted = true;
+            audioOverlay.style.display = 'none';
+        });
+
+        const topChars = [
+            { el: document.getElementById('char1'), x: 20, y: 50, vx: 2, vy: 1.5 },
+            { el: document.getElementById('char2'), x: 150, y: 150, vx: -1.5, vy: 2 },
+            { el: document.getElementById('char3'), x: 250, y: 100, vx: 2.5, vy: -1.5 }
+        ];
+        let topAnimationId;
+
+        function animateTopChars() {
+            if (startScreen.style.display === 'none') {
+                cancelAnimationFrame(topAnimationId);
+                return;
+            }
+            const w = startScreen.clientWidth;
+            const h = startScreen.clientHeight;
+            const charSize = 70; 
+
+            topChars.forEach(c => {
+                c.x += c.vx;
+                c.y += c.vy;
+                
+                if (c.x <= 0 || c.x + charSize >= w) c.vx *= -1;
+                if (c.y <= 0 || c.y + charSize >= h) c.vy *= -1;
+                
+                c.el.style.left = c.x + 'px';
+                c.el.style.top = c.y + 'px';
+            });
+            topAnimationId = requestAnimationFrame(animateTopChars);
+        }
+        animateTopChars();
+
+        let pos = { x: 0, y: 0 };
+        let vector = { x: 0, y: 0 };
+        let speedMultiplier = 1;
+        let isRotating = false;
+        let rotationAngle = 0;
+        let gameInterval;
+        let isPlaying = false;
+        
+        let targetX = 0;
+        let targetY = 0;
+
+        startBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            startScreen.style.display = 'none'; 
+            tooth.style.display = 'block';
+            stopBtn.style.display = 'block';
+            
+            // 【重要修正】画像内の白い点の位置（100%フィット位置）に座標をピンポイントで固定
+            targetX = gameArea.clientWidth * 0.565; // 横は中央よりやや右
+            targetY = gameArea.clientHeight * 0.715; // 縦は唇の隙間の少し上（歯茎の奥、白い点の位置）
+            
+            setupRandomMovement();
+            
+            isPlaying = true;
+            gameInterval = setInterval(moveTooth, 20);
+        });
+
+        function setupRandomMovement() {
+            const w = gameArea.clientWidth;
+            const h = gameArea.clientHeight;
+            const margin = 100;
+
+            const pattern = Math.floor(Math.random() * 8);
+            let startX, startY;
+            
+            switch(pattern) {
+                case 0: startX = targetX; startY = -margin; break;
+                case 1: startX = targetX; startY = h + margin; break;
+                case 2: startX = -margin; startY = -margin; break;
+                case 3: startX = w + margin; startY = -margin; break;
+                case 4: startX = -margin; startY = h + margin; break;
+                case 5: startX = w + margin; startY = h + margin; break;
+                case 6: startX = -margin; startY = targetY; break; 
+                case 7: startX = w + margin; startY = targetY; break; 
+            }
+
+            pos.x = startX;
+            pos.y = startY;
+
+            let dx = targetX - startX;
+            let dy = targetY - startY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            let baseSpeed = 8;
+            vector.x = (dx / distance) * baseSpeed;
+            vector.y = (dy / distance) * baseSpeed;
+
+            const rand = Math.random(); 
+            isRotating = false;
+            
+            if (rand < 0.60) {
+                speedMultiplier = 1.0; 
+            } else if (rand < 0.80) {
+                speedMultiplier = 1.6; 
+            } else if (rand < 0.95) {
+                speedMultiplier = 1.0; 
+                isRotating = true;
+            } else {
+                speedMultiplier = 0.35; 
+            }
+        }
+
+        function moveTooth() {
+            if (!isPlaying) return;
+            
+            pos.x += vector.x * speedMultiplier;
+            pos.y += vector.y * speedMultiplier;
+            
+            tooth.style.left = pos.x + 'px';
+            tooth.style.top = pos.y + 'px';
+
+            if (isRotating) {
+                rotationAngle += 12 * speedMultiplier;
+                tooth.style.transform = `rotate(${rotationAngle}deg)`;
+            } else {
+                tooth.style.transform = `rotate(0deg)`;
+            }
+
+            const w = gameArea.clientWidth;
+            const h = gameArea.clientHeight;
+            if (pos.x < -150 || pos.x > w + 150 || pos.y < -150 || pos.y > h + 150) {
+                gameOver();
+            }
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            bgm.pause();
+            
+            stopSe.currentTime = 0;
+            stopSe.play().catch(e => console.log(e));
+            
+            resultText.innerHTML = `
+                <div class="gameover-text">GAME OVER</div>
+                <div style="font-size:11px; color:#333; font-weight:bold;">通り過ぎてしまった…</div>
+            `;
+            resultBoard.style.display = "block";
+            retryBtn.style.display = "block";
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (!isPlaying) return;
+            isPlaying = false;
+            clearInterval(gameInterval);
+
+            bgm.pause();
+            stopSe.currentTime = 0;
+            stopSe.play().catch(e => console.log(e));
+
+            let dx = targetX - pos.x;
+            let dy = targetY - pos.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            let score;
+
+            // 1.5ピクセル以内のズレのみ100.0%（超シビア設定）
+            if (distance <= 1.5) {
+                score = 100.0;
+            } else {
+                score = Math.max(0, 100 - (distance * 1.8));
+                if (score >= 100) score = 99.9;
+            }
+
+            let displayScore = score.toFixed(1);
+            let htmlStr = `<div class="result-title">１本の歯フィット感</div>`;
+
+            if (displayScore === "100.0") {
+                htmlStr += `<div class="gold-text-wrapper"><div class="gold-text">100.0%</div></div>`;
+            } else {
+                htmlStr += `<div class="score-text">${displayScore}%</div>`;
+            }
+            
+            resultText.innerHTML = htmlStr;
+            resultBoard.style.display = "block";
+            retryBtn.style.display = "block";
+        });
+    </script>
+</body>
+</html>

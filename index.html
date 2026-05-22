@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ONE TOOTH</title>
+    <style>
+        body { margin: 0; background-color: #000; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        
+        /* 縦横比を9:19.5で固定 */
+        #gameArea { 
+            position: relative; 
+            height: 100vh; 
+            width: calc(100vh * (9 / 19.5)); 
+            max-width: 100vw;
+            background-image: url('bg.jpg'); 
+            background-size: cover; 
+            background-position: center;
+            overflow: hidden; 
+        }
+        
+        #startScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('TITLE_LOGO.jpg') no-repeat center center; background-size: cover; z-index: 50; }
+        
+        /* ボタン設定 */
+        #startBtn, #stopBtn { 
+            position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%); 
+            width: 160px; cursor: pointer; z-index: 60;
+        }
+        #stopBtn { z-index: 20; display: none; }
+        
+        .top-char { position: absolute; width: 15%; z-index: 55; pointer-events: none; }
+        #tooth { position: absolute; width: 10%; z-index: 10; display: none; }
+    </style>
+</head>
+<body>
+    <div id="gameArea">
+        <div id="startScreen">
+            <img id="char1" class="top-char" src="top_t_01.png">
+            <img id="char2" class="top-char" src="top_t_02.png">
+            <img id="char3" class="top-char" src="top_t_03.png">
+            <img id="startBtn" src="START.png">
+        </div>
+        <img id="tooth" src="tooth.png">
+        <img id="stopBtn" src="STOP.png">
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const tooth = document.getElementById('tooth');
+        
+        // 座標指定
+        let targetX = gameArea.clientWidth * 0.58;
+        let targetY = gameArea.clientHeight * 0.72;
+        let pos = {x: 0, y: 0}, vector = {x: 0, y: 0}, isPlaying = false, interval;
+
+        // キャラクターアニメーション
+        const chars = [
+            { el: document.getElementById('char1'), x: 50, y: 300, vx: 3, vy: 2 },
+            { el: document.getElementById('char2'), x: 150, y: 400, vx: -2, vy: 3 },
+            { el: document.getElementById('char3'), x: 250, y: 500, vx: 2, vy: -2 }
+        ];
+
+        function animate() {
+            chars.forEach(c => {
+                c.x += c.vx; c.y += c.vy;
+                if(c.x < 0 || c.x > gameArea.clientWidth - 50) c.vx *= -1;
+                if(c.y < 0 || c.y > gameArea.clientHeight - 50) c.vy *= -1;
+                c.el.style.left = c.x + 'px'; c.el.style.top = c.y + 'px';
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        startBtn.addEventListener('click', () => {
+            document.getElementById('startScreen').style.display = 'none';
+            tooth.style.display = 'block';
+            stopBtn.style.display = 'block';
+            isPlaying = true;
+            interval = setInterval(move, 20);
+        });
+
+        function move() {
+            if(!isPlaying) return;
+            pos.x += 10; tooth.style.left = pos.x + 'px';
+            tooth.style.top = targetY + 'px'; // 高さ固定で横切る
+            if(pos.x > gameArea.clientWidth) pos.x = -50;
+        }
+
+        stopBtn.addEventListener('click', () => {
+            isPlaying = false;
+            clearInterval(interval);
+            alert("止まりました！位置ズレがないかご確認ください。");
+        });
+    </script>
+</body>
+</html>

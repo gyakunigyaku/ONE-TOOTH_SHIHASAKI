@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>はをあてるゲーム</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+  }
+  #game-container {
+    position: relative;
+    width: 360px; /* 確定した画角 */
+    height: 640px; /* 確定した画角 */
+    background-image: url('bg.jpg'); /* 背景画像 (正解.jpgに差し替えてください) */
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    border: 2px solid #333;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+  #tooth {
+    position: absolute;
+    font-size: 40px;
+    cursor: pointer;
+    transition: left 0.5s ease-out, top 0.5s ease-out;
+  }
+  #controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+  }
+  .control-button {
+    padding: 8px 16px; /* ボタンを少し小さく */
+    font-size: 14px; /* ボタンを少し小さく */
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  #result {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: white;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div id="game-container">
+  <div id="tooth">🦷</div>
+  <div id="result">100%</div>
+  <div id="controls">
+    <button id="start-btn" class="control-button">スタート</button>
+    <button id="stop-btn" class="control-button" disabled>ストップ</button>
+  </div>
+</div>
+<script>
+  const gameContainer = document.getElementById('game-container');
+  const tooth = document.getElementById('tooth');
+  const startBtn = document.getElementById('start-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const result = document.getElementById('result');
+
+  // ゲームコンテナのサイズ
+  const containerWidth = 360;
+  const containerHeight = 640;
+
+  // 正解の位置 (正解.jpgから抽出)
+  const correctX = 180; // 横幅の中央
+  const correctY = 427; // 下から約1/3
+
+  let isMoving = false;
+  let score = 0;
+
+  // 歯をランダムな位置に移動させる関数
+  function moveTooth() {
+    const randomX = Math.floor(Math.random() * (containerWidth - 40));
+    const randomY = Math.floor(Math.random() * (containerHeight - 40));
+    tooth.style.left = `${randomX}px`;
+    tooth.style.top = `${randomY}px`;
+  }
+
+  // ゲームスタート
+  startBtn.addEventListener('click', () => {
+    isMoving = true;
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    result.style.display = 'none';
+    score = 0;
+    moveTooth();
+  });
+
+  // 歯をストップ
+  stopBtn.addEventListener('click', () => {
+    isMoving = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+
+    // 現在の歯の位置
+    const toothX = parseInt(tooth.style.left);
+    const toothY = parseInt(tooth.style.top);
+
+    // 正解との距離を計算
+    const distance = Math.sqrt(Math.pow(correctX - toothX, 2) + Math.pow(correctY - toothY, 2));
+
+    // スコア計算 (100%からの減点方式)
+    const maxDistance = Math.sqrt(Math.pow(containerWidth, 2) + Math.pow(containerHeight, 2));
+    score = Math.max(0, 100 - Math.round((distance / maxDistance) * 100));
+
+    // 結果表示
+    result.textContent = `${score}%`;
+    result.style.display = 'block';
+  });
+</script>
+</body>
+</html>

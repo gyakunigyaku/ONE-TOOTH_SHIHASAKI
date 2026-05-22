@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ONE TOOTH</title>
+    <style>
+        /* 画面の余白を黒くして、ゲーム領域を中央に配置 */
+        body { margin: 0; background-color: #000; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        
+        /* 【最強の比率ロック】
+           画面全体に対し、高さを優先して「9:19.5」の比率を維持する箱。
+           これで画面サイズが変わっても比率は一切変わりません。
+        */
+        #gameArea { 
+            position: relative; 
+            height: 100vh; 
+            width: calc(100vh * (9 / 19.5)); 
+            max-width: 100vw;
+            background-image: url('bg.jpg'); 
+            background-size: cover; 
+            background-position: center;
+            overflow: hidden; 
+        }
+        
+        /* 以降の要素は #gameArea の内部に配置されるため、比率は常に一定です */
+        #startScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('TITLE_LOGO.jpg') no-repeat center center; background-size: cover; z-index: 50; }
+        
+        #startBtn, #stopBtn { 
+            position: absolute; 
+            bottom: 3%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 40%; /* 画面幅に対するパーセント指定に変更 */
+            cursor: pointer; 
+        }
+        #startBtn { z-index: 60; }
+        #stopBtn { z-index: 20; display: none; }
+        
+        #tooth { position: absolute; width: 15%; z-index: 10; display: none; margin-left: -7.5%; margin-top: -7.5%; }
+        
+        #resultBoard { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); width: 80%; text-align: center; display: none; z-index: 30; }
+    </style>
+</head>
+<body>
+    <div id="gameArea">
+        <div id="startScreen">
+            <img id="startBtn" src="START.png" alt="START">
+        </div>
+        <img id="tooth" src="tooth.png" alt="歯">
+        <img id="stopBtn" src="stop.png" alt="STOP">
+        <div id="resultBoard"><div id="resultText"></div></div>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const startBtn = document.getElementById('startBtn');
+        const tooth = document.getElementById('tooth');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultBoard = document.getElementById('resultBoard');
+        
+        let targetX = 0;
+        let targetY = 0;
+        let pos = { x: 0, y: 0 };
+        let vector = { x: 0, y: 0 };
+        let gameInterval, isPlaying;
+
+        startBtn.addEventListener('click', () => {
+            document.getElementById('startScreen').style.display = 'none';
+            tooth.style.display = 'block';
+            stopBtn.style.display = 'block';
+            
+            // #gameAreaのサイズに基づいた固定座標
+            targetX = gameArea.clientWidth * 0.58; 
+            targetY = gameArea.clientHeight * 0.69; 
+            
+            setupMovement();
+            isPlaying = true;
+            gameInterval = setInterval(move, 20);
+        });
+
+        function setupMovement() {
+            const w = gameArea.clientWidth;
+            const h = gameArea.clientHeight;
+            pos.x = -100; pos.y = targetY; // 横から入ってくるパターン
+            let dx = targetX - pos.x;
+            let dy = targetY - pos.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            vector.x = (dx/dist) * 8;
+            vector.y = (dy/dist) * 8;
+        }
+
+        function move() {
+            if(!isPlaying) return;
+            pos.x += vector.x;
+            pos.y += vector.y;
+            tooth.style.left = pos.x + 'px';
+            tooth.style.top = pos.y + 'px';
+        }
+
+        stopBtn.addEventListener('click', () => {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            let dx = targetX - pos.x;
+            let dy = targetY - pos.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            
+            // 距離が近いほど高スコア
+            let score = Math.max(0, 100 - (dist * 2));
+            document.getElementById('resultText').innerHTML = `<h1 style="color:red;">${score.toFixed(1)}%</h1>`;
+            resultBoard.style.display = 'block';
+        });
+    </script>
+</body>
+</html>

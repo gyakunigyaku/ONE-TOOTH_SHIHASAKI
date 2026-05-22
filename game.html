@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ONE TOOTH</title>
+    <style>
+        body { margin: 0; display: flex; justify-content: center; background-color: #000; overflow: hidden; }
+        #gameArea { position: relative; width: 100vw; max-width: 500px; height: 100vh; background: url('bg.jpg') no-repeat center center; background-size: cover; overflow: hidden; }
+        
+        /* スタート画面の装飾 */
+        #startScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 50; }
+        #titleLogo { width: 90%; max-width: 400px; margin-bottom: 40px; }
+        #startBtn { width: 140px; cursor: pointer; transition: transform 0.1s; }
+        #startBtn:active { transform: scale(0.95); }
+
+        /* ゲーム用要素（初期は非表示） */
+        #tooth { position: absolute; width: 40px; left: 55%; top: -50px; z-index: 10; display: none; }
+        #stopBtn { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 120px; cursor: pointer; z-index: 20; display: none; }
+        
+        #resultBoard { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.95); padding: 30px; text-align: center; border-radius: 15px; display: none; width: 80%; z-index: 30; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .score-text { font-size: 28px; font-weight: bold; color: #333; margin-bottom: 20px; }
+        .retry-btn { padding: 10px 20px; font-size: 18px; font-weight: bold; background-color: #ff4a4a; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="gameArea">
+        <div id="startScreen">
+            <img id="titleLogo" src="TITLE_LOGO.jpg" alt="ONE TOOTH">
+            <img id="startBtn" src="START.png" alt="START">
+        </div>
+
+        <img id="tooth" src="tooth.png" alt="歯">
+        <img id="stopBtn" src="stop.png" alt="STOP">
+        
+        <div id="resultBoard">
+            <div id="resultText" class="score-text"></div>
+            <button class="retry-btn" onclick="location.reload()">もう一度プレイ</button>
+        </div>
+    </div>
+
+    <script>
+        const startScreen = document.getElementById('startScreen');
+        const startBtn = document.getElementById('startBtn');
+        const tooth = document.getElementById('tooth');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultBoard = document.getElementById('resultBoard');
+        const resultText = document.getElementById('resultText');
+        const gameArea = document.getElementById('gameArea');
+
+        let pos = -50;
+        let gameInterval;
+        let isPlaying = false;
+        
+        // 歯が正解となる口元の位置
+        const targetY = gameArea.clientHeight * 0.75; 
+
+        // 音声ファイルの読み込み（ループ設定等）
+        const bgm = new Audio('イッポンのハァァァ.mp3');
+        bgm.loop = true;
+        const stopSe = new Audio('イッポンのハァァァSTOP.mp3');
+
+        // スタートボタン処理
+        startBtn.addEventListener('click', () => {
+            // 画面切り替え
+            startScreen.style.display = 'none';
+            tooth.style.display = 'block';
+            stopBtn.style.display = 'block';
+            
+            // BGMの再生（ブラウザの仕様上、ユーザーのクリックと同時に再生が必要）
+            bgm.currentTime = 0;
+            bgm.play().catch(e => console.log("BGM再生エラー:", e));
+            
+            isPlaying = true;
+            gameInterval = setInterval(drop, 20);
+        });
+
+        // 落下処理
+        function drop() {
+            if (!isPlaying) return;
+            pos += 8;
+            tooth.style.top = pos + 'px';
+
+            if (pos > gameArea.clientHeight - 50) {
+                isPlaying = false;
+                clearInterval(gameInterval);
+                bgm.pause(); // BGM停止
+                resultText.innerHTML = "ゲームオーバー<br><span style='font-size:16px; color:#666;'>下に落ちちゃった！</span>";
+                resultBoard.style.display = "block";
+            }
+        }
+
+        // STOPボタン処理
+        stopBtn.addEventListener('click', () => {
+            if (!isPlaying) return;
+            isPlaying = false;
+            clearInterval(gameInterval);
+
+            // 音声の切り替え
+            bgm.pause();
+            stopSe.currentTime = 0;
+            stopSe.play().catch(e => console.log("SE再生エラー:", e));
+
+            // 点数計算
+            let diff = Math.abs(targetY - pos);
+            let score = Math.max(0, 100 - Math.floor(diff / 4));
+
+            // 結果表示
+            if (score === 100) {
+                resultText.innerHTML = "奇跡のジャストフィット！<br><span style='font-size:36px; color:#ff0000;'>100%</span>";
+            } else {
+                resultText.innerHTML = "フィット率<br><span style='font-size:36px; color:#ff0000;'>" + score + "%</span><br><span style='font-size:16px; color:#666;'>100点中</span>";
+            }
+            resultBoard.style.display = "block";
+        });
+    </script>
+</body>
+</html>
